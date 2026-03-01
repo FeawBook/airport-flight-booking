@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Flight {
+  id            String     @id @default(cuid())
+  flightNumber  String     @unique
+  origin        String
+  destination   String
+  departureTime DateTime
+  arrivalTime   DateTime
+  status        String     @default("SCHEDULED") // SCHEDULED, DELAYED, CANCELLED, BOARDING, DEPARTED
+  bookings      Booking[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Booking {
+  id            String     @id @default(cuid())
+  pnr           String     @unique // Booking Reference
+  flightId      String
+  flight        Flight     @relation(fields: [flightId], references: [id])
+  passengers    Passenger[]
+  status        String     @default("CONFIRMED") // CONFIRMED, CANCELLED
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Passenger {
+  id            String     @id @default(cuid())
+  firstName     String
+  lastName      String
+  seatNumber    String?
+  isCheckedIn   Boolean    @default(false)
+  bookingId     String
+  booking       Booking    @relation(fields: [bookingId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
