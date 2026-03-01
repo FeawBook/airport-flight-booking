@@ -42,6 +42,8 @@ model Passenger {
   firstName     String
   lastName      String
   seatNumber    String?
+  nationality   String?
+  phoneNumber   String?
   isCheckedIn   Boolean    @default(false)
   bookingId     String
   booking       Booking    @relation(fields: [bookingId], references: [id])

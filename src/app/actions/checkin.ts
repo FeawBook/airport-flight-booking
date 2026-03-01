@@ -3,7 +3,8 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
-export async function checkInAction(formData: FormData) {
+// Step 1: Login / Retrieve Booking
+export async function getBookingAction(formData: FormData) {
   const pnr = formData.get('pnr') as string
   const lastName = formData.get('lastName') as string
 
@@ -12,53 +13,71 @@ export async function checkInAction(formData: FormData) {
   }
 
   try {
-    // Find the booking with matching PNR and passengers with the given last name
     const booking = await prisma.booking.findUnique({
       where: { pnr: pnr.toUpperCase() },
       include: {
         flight: true,
-        passengers: {
-          where: {
-            lastName: {
-              equals: lastName,
-              mode: 'insensitive',
+        passengers: true
+      }
+    })
+
+    if (!booking) {
+      return { error: 'Booking not found' }
+    }
+
+    // Verify if any passenger has the matching last name
+    const hasMatchingPassenger = booking.passengers.some(
+      p => p.lastName.toLowerCase() === lastName.toLowerCase()
+    )
+
+    if (!hasMatchingPassenger) {
+      return { error: 'No passenger found with this last name on this booking' }
+    }
+
+    return { 
+      success: true, 
+      booking 
+    }
+  } catch (error) {
+    console.error('Retrieve booking error:', error)
+    return { error: 'An error occurred. Please try again later.' }
+  }
+}
+
+// Step 4: Perform Check-in and save passenger details
+export async function completeCheckInAction(
+  passengers: { id: string; nationality: string; phoneNumber: string }[]
+) {
+  try {
+    const updatePromises = passengers.map(p => 
+      prisma.passenger.update({
+        where: { id: p.id },
+        data: { 
+          isCheckedIn: true,
+          nationality: p.nationality,
+          phoneNumber: p.phoneNumber
+        },
+        include: {
+          booking: {
+            include: {
+              flight: true
             }
           }
         }
-      }
-    })
+      })
+    )
 
-    if (!booking || booking.passengers.length === 0) {
-      return { error: 'Booking not found or last name does not match' }
-    }
-
-    const passenger = booking.passengers[0]
-
-    if (passenger.isCheckedIn) {
-      return { 
-        success: true, 
-        message: 'You are already checked in.',
-        booking,
-        passenger 
-      }
-    }
-
-    // Perform check-in
-    const updatedPassenger = await prisma.passenger.update({
-      where: { id: passenger.id },
-      data: { isCheckedIn: true }
-    })
+    const updatedPassengers = await Promise.all(updatePromises)
 
     revalidatePath('/checkin')
 
     return { 
       success: true, 
-      message: 'Check-in successful!',
-      booking: { ...booking, passengers: [updatedPassenger] },
-      passenger: updatedPassenger
+      passengers: updatedPassengers
     }
   } catch (error) {
-    console.error('Check-in error:', error)
-    return { error: 'An error occurred during check-in. Please try again later.' }
+    console.error('Complete check-in error:', error)
+    return { error: 'Failed to complete check-in.' }
   }
 }
+
