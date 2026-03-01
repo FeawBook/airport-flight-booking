@@ -1,4 +1,5 @@
 import { PlaneTakeoff, Clock, CreditCard, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   return (
@@ -107,9 +108,9 @@ export default function Home() {
               </div>
             </div>
             <div className="mt-6">
-              <button className="w-full flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+              <Link href="/checkin" className="w-full flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors">
                 Check-in Now
-              </button>
+              </Link>
             </div>
           </div>
         </div>
